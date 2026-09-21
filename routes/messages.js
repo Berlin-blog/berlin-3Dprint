@@ -12,17 +12,17 @@ router.get('/', requireLogin, async (req, res) => {
 
   const [[{ total }]] = await pool.execute(
     'SELECT COUNT(*) AS total FROM messages WHERE user_id = ?',
-    [req.session.user.id]
+    [req.user.id]
   );
 
   const [rows] = await pool.execute(
     'SELECT * FROM messages WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
-    [req.session.user.id, pageSize, offset]
+    [req.user.id, pageSize, offset]
   );
 
   const [[{ unread }]] = await pool.execute(
     'SELECT COUNT(*) AS unread FROM messages WHERE user_id = ? AND is_read = FALSE',
-    [req.session.user.id]
+    [req.user.id]
   );
 
   res.json({
@@ -36,7 +36,7 @@ router.get('/', requireLogin, async (req, res) => {
 router.get('/unread/count', requireLogin, async (req, res) => {
   const [[{ unread }]] = await pool.execute(
     'SELECT COUNT(*) AS unread FROM messages WHERE user_id = ? AND is_read = FALSE',
-    [req.session.user.id]
+    [req.user.id]
   );
   res.json({ unread });
 });
@@ -45,7 +45,7 @@ router.get('/unread/count', requireLogin, async (req, res) => {
 router.put('/:id/read', requireLogin, async (req, res) => {
   await pool.execute(
     'UPDATE messages SET is_read = TRUE WHERE id = ? AND user_id = ?',
-    [req.params.id, req.session.user.id]
+    [req.params.id, req.user.id]
   );
   res.json({ message: '已标记已读' });
 });
@@ -54,7 +54,7 @@ router.put('/:id/read', requireLogin, async (req, res) => {
 router.put('/read-all', requireLogin, async (req, res) => {
   await pool.execute(
     'UPDATE messages SET is_read = TRUE WHERE user_id = ? AND is_read = FALSE',
-    [req.session.user.id]
+    [req.user.id]
   );
   res.json({ message: '已全部标记已读' });
 });

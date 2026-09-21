@@ -1,18 +1,21 @@
 const express = require('express');
-const session = require('express-session');
 const cors = require('cors');
 const compression = require('compression');
 const path = require('path');
 const fs = require('fs');
 
-// 加载 .env
+// 加载 .env（本地开发用，Vercel 直接读环境变量）
 const envPath = path.join(__dirname, '.env');
 if (fs.existsSync(envPath)) {
   for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
     const t = line.trim();
     if (!t || t.startsWith('#')) continue;
     const idx = t.indexOf('=');
-    if (idx > 0) process.env[t.slice(0, idx).trim()] = t.slice(idx + 1).trim();
+    if (idx > 0) {
+      const key = t.slice(0, idx).trim();
+      const val = t.slice(idx + 1).trim();
+      if (!process.env[key]) process.env[key] = val;
+    }
   }
 }
 
@@ -25,25 +28,15 @@ const uploadRoutes = require('./routes/upload');
 const messageRoutes = require('./routes/messages');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 // 中间件
 app.use(compression());
 app.use(cors({ origin: true, credentials: true }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(session({
-  secret: process.env.SESSION_SECRET || '3dprint-secret-key-2024',
-  resave: false,
-  saveUninitialized: false,
-  cookie: { maxAge: 24 * 60 * 60 * 1000 }, // 24小时
-}));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // 静态文件
 app.use(express.static(path.join(__dirname, 'public')));
-// 上传文件：本地用 uploads/ 目录，生产环境用 /tmp
-const uploadsPath = (process.env.NODE_ENV === 'production' || process.env.RENDER) ? '/tmp' : path.join(__dirname, 'uploads');
-app.use('/uploads', express.static(uploadsPath));
 
 // API 路由
 app.use('/api/auth', authRoutes);
@@ -66,9 +59,16 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: '服务器内部错误', detail: err.message });
 });
 
-app.listen(PORT, () => {
-  console.log(`\n🚀 3D打印平台已启动: http://localhost:${PORT}`);
-  console.log(`📦 管理后台: http://localhost:${PORT}/admin`);
-  console.log(`👤 管理员账号: admin / admin123`);
-  console.log(`👤 演示用户: demo / demo123\n`);
-});
+// 本地开发时启动服务器，Vercel 时导出 app
+const isVercel = process.env.VERCEL || process.env.NODE_ENV === 'production';
+if (!isVercel) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`\n🚀 3D打印平台已启动: http://localhost:${PORT}`);
+    console.log(`📦 管理后台: http://localhost:${PORT}/admin`);
+    console.log(`👤 管理员账号: admin / admin123`);
+    console.log(`👤 演示用户: demo / demo123\n`);
+  });
+}
+
+module.exports = app;

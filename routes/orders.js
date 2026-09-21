@@ -91,7 +91,7 @@ router.post('/', requireLogin, async (req, res) => {
     const [orderResult] = await conn.execute(
       `INSERT INTO orders (order_no, user_id, order_type, total_price, status, remark, recipient_name, recipient_phone, shipping_address)
        VALUES (?, ?, ?, ?, 'pending', ?, ?, ?, ?)`,
-      [orderNo, req.session.user.id, order_type, totalPrice.toFixed(2),
+      [orderNo, req.user.id, order_type, totalPrice.toFixed(2),
        remark || null, recipient_name, recipient_phone, shipping_address]
     );
 
@@ -129,7 +129,7 @@ router.get('/my', requireLogin, async (req, res) => {
 
   const [[{ total }]] = await pool.execute(
     'SELECT COUNT(*) AS total FROM orders WHERE user_id = ?',
-    [req.session.user.id]
+    [req.user.id]
   );
 
   const [rows] = await pool.execute(
@@ -140,7 +140,7 @@ router.get('/my', requireLogin, async (req, res) => {
      GROUP BY o.id
      ORDER BY o.created_at DESC
      LIMIT ? OFFSET ?`,
-    [req.session.user.id, pageSize, offset]
+    [req.user.id, pageSize, offset]
   );
   res.json({
     orders: rows,
@@ -152,7 +152,7 @@ router.get('/my', requireLogin, async (req, res) => {
 router.get('/:orderNo', requireLogin, async (req, res) => {
   const [orderRows] = await pool.execute(
     'SELECT * FROM orders WHERE order_no = ? AND user_id = ?',
-    [req.params.orderNo, req.session.user.id]
+    [req.params.orderNo, req.user.id]
   );
   if (orderRows.length === 0) {
     return res.status(404).json({ error: '订单不存在' });
@@ -172,7 +172,7 @@ router.get('/:orderNo', requireLogin, async (req, res) => {
 router.put('/:orderNo/cancel', requireLogin, async (req, res) => {
   const [rows] = await pool.execute(
     `UPDATE orders SET status = 'cancelled' WHERE order_no = ? AND user_id = ? AND status = 'pending'`,
-    [req.params.orderNo, req.session.user.id]
+    [req.params.orderNo, req.user.id]
   );
   if (rows.affectedRows === 0) {
     return res.status(400).json({ error: '订单无法取消（可能已处理）' });

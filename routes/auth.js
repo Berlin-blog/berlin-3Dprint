@@ -1,8 +1,8 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const { pool } = require('../db/pool');
-const { requireLogin } = require('../middleware/auth');
-const { checkLocked, recordFailure, clearFailures, getRemainingAttempts, MAX_ATTEMPTS } = require('../middleware/rateLimit');
+const { requireLogin, setAuthCookie, clearAuthCookie, parseUser } = require('../middleware/auth');
+const { checkLocked, recordFailure, clearFailures, getRemainingAttempts } = require('../middleware/rateLimit');
 
 const router = express.Router();
 
@@ -34,14 +34,13 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// 登录（带失败计数+锁定）
+// 登录
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
     return res.status(400).json({ error: '用户名和密码不能为空' });
   }
 
-  // 检查是否被锁定
   const lockMsg = checkLocked(username);
   if (lockMsg) {
     return res.status(429).json({ error: lockMsg });
@@ -68,10 +67,9 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ error: `用户名或密码错误（剩余 ${remaining} 次尝试机会）` });
     }
 
-    // 登录成功，清除失败记录
     clearFailures(username);
 
-    req.session.user = {
+    const userObj = {
       id: user.id,
       username: user.username,
       real_name: user.real_name,
@@ -79,7 +77,8 @@ router.post('/login', async (req, res) => {
       email: user.email,
       role: user.role,
     };
-    res.json({ message: '登录成功', user: req.session.user });
+    setAuthCookie(res, userObj);
+    res.json({ message: '登录成功', user: userObj });
   } catch (err) {
     res.status(500).json({ error: '登录失败', detail: err.message });
   }
@@ -87,17 +86,14 @@ router.post('/login', async (req, res) => {
 
 // 退出
 router.post('/logout', (req, res) => {
-  req.session.destroy(() => {
-    res.json({ message: '已退出登录' });
-  });
+  clearAuthCookie(res);
+  res.json({ message: '已退出登录' });
 });
 
 // 获取当前用户
 router.get('/me', (req, res) => {
-  if (!req.session.user) {
-    return res.json({ user: null });
-  }
-  res.json({ user: req.session.user });
+  const user = parseUser(req);
+  res.json({ user });
 });
 
 // 更新个人信息
@@ -106,12 +102,12 @@ router.put('/profile', requireLogin, async (req, res) => {
   try {
     await pool.execute(
       'UPDATE users SET real_name = ?, phone = ?, email = ? WHERE id = ?',
-      [real_name || null, phone || null, email || null, req.session.user.id]
+      [real_name || null, phone || null, email || null, req.user.id]
     );
-    req.session.user.real_name = real_name;
-    req.session.user.phone = phone;
-    req.session.user.email = email;
-    res.json({ message: '更新成功', user: req.session.user });
+    const userObj = { ...req.user, real_name, phone, email };
+    // 重新签发 token 保持信息最新
+    setAuthCookie(res, userObj);
+    res.json({ message: '更新成功', user: userObj });
   } catch (err) {
     res.status(500).json({ error: '更新失败', detail: err.message });
   }
