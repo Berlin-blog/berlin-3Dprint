@@ -28,6 +28,7 @@ async function migrate() {
     password: process.env.DB_PASSWORD || 'root123456',
     database: process.env.DB_NAME || '3dprint',
     multipleStatements: true,
+    ssl: DB_SSL ? { rejectUnauthorized: true } : undefined,
   });
 
   console.log('✅ 连接数据库成功');

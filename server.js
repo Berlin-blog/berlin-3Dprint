@@ -41,7 +41,9 @@ app.use(session({
 
 // 静态文件
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// 上传文件：本地用 uploads/ 目录，生产环境用 /tmp
+const uploadsPath = (process.env.NODE_ENV === 'production' || process.env.RENDER) ? '/tmp' : path.join(__dirname, 'uploads');
+app.use('/uploads', express.static(uploadsPath));
 
 // API 路由
 app.use('/api/auth', authRoutes);

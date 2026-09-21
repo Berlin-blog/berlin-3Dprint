@@ -26,11 +26,13 @@ const DB_PORT = parseInt(process.env.DB_PORT || '3306');
 const DB_USER = process.env.DB_USER || 'root';
 const DB_PASSWORD = process.env.DB_PASSWORD || 'root123456';
 const DB_NAME = process.env.DB_NAME || '3dprint';
+const DB_SSL = process.env.DB_SSL === 'true';
 
 async function migrate() {
   const conn = await mysql.createConnection({
     host: DB_HOST, port: DB_PORT, user: DB_USER, password: DB_PASSWORD, database: DB_NAME,
     multipleStatements: true,
+    ssl: DB_SSL ? { rejectUnauthorized: true } : undefined,
   });
 
   console.log('✅ 连接数据库成功');

@@ -6,8 +6,12 @@ const { requireLogin } = require('../middleware/auth');
 
 const router = express.Router();
 
+// Render 等 serverless 平台只有 /tmp 可写，本地用项目目录
+const isProduction = process.env.NODE_ENV === 'production' || !!process.env.RENDER;
+const uploadBase = isProduction ? '/tmp' : path.join(__dirname, '..', 'uploads');
+
 // 确保上传目录存在
-const uploadDir = path.join(__dirname, '..', 'uploads', 'models');
+const uploadDir = path.join(uploadBase, 'models');
 fs.mkdirSync(uploadDir, { recursive: true });
 
 // multer 配置
@@ -39,16 +43,18 @@ router.post('/model', requireLogin, upload.single('file'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: '未收到文件' });
   }
+  // 生产环境下文件存在 /tmp，重启会丢失，返回文件名让管理员后续获取
   res.json({
     message: '上传成功',
     file_path: `/uploads/models/${req.file.filename}`,
     file_name: req.file.originalname,
     file_size: req.file.size,
+    temp_note: isProduction ? '文件为临时存储，请通过订单备注或联系客服发送模型文件' : null,
   });
 });
 
 // 上传产品图片
-const imgDir = path.join(__dirname, '..', 'uploads', 'products');
+const imgDir = path.join(uploadBase, 'products');
 fs.mkdirSync(imgDir, { recursive: true });
 
 const imgStorage = multer.diskStorage({

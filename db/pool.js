@@ -1,21 +1,8 @@
 const mysql = require('mysql2/promise');
 const fs = require('fs');
 const path = require('path');
-const bcrypt = require('bcryptjs');
 
-const config = {
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '3306'),
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || 'root123456',
-  database: process.env.DB_NAME || '3dprint',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  charset: 'utf8mb4',
-};
-
-// 从 .env 文件加载环境变量（简易实现，避免额外依赖）
+// 从 .env 文件加载环境变量（本地开发用，Render 直接读环境变量）
 function loadEnv() {
   const envPath = path.join(__dirname, '..', '.env');
   if (fs.existsSync(envPath)) {
@@ -34,16 +21,30 @@ function loadEnv() {
 
 loadEnv();
 
-const pool = mysql.createPool({
-  host: process.env.DB_HOST || config.host,
-  port: parseInt(process.env.DB_PORT || String(config.port)),
-  user: process.env.DB_USER || config.user,
-  password: process.env.DB_PASSWORD || config.password,
-  database: process.env.DB_NAME || config.database,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0,
-  charset: 'utf8mb4',
-});
+// 构建数据库连接配置
+// 本地开发: localhost:3306, 无 SSL
+// TiDB Cloud / 远程数据库: 使用环境变量 + SSL
+function buildConfig() {
+  const config = {
+    host: process.env.DB_HOST || 'localhost',
+    port: parseInt(process.env.DB_PORT || '3306'),
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || 'root123456',
+    database: process.env.DB_NAME || '3dprint',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    charset: 'utf8mb4',
+  };
 
-module.exports = { pool, config };
+  // TiDB Cloud / 远程数据库需要 SSL
+  if (process.env.DB_SSL === 'true' || process.env.DATABASE_URL) {
+    config.ssl = { rejectUnauthorized: true };
+  }
+
+  return config;
+}
+
+const pool = mysql.createPool(buildConfig());
+
+module.exports = { pool, buildConfig };

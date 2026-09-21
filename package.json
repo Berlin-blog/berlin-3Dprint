@@ -5,7 +5,12 @@
   "main": "index.js",
   "scripts": {
     "init-db": "node db/init.js",
-    "start": "node server.js"
+    "migrate": "node db/migrate_v2.js && node db/migrate_v3.js && node db/migrate_v4.js",
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "keywords": [],
   "author": "",
