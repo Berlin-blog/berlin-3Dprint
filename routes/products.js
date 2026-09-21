@@ -37,10 +37,10 @@ router.get('/', async (req, res) => {
   // 查总数
   const [[{ total }]] = await pool.execute(`SELECT COUNT(*) AS total FROM products ${where}`, params);
 
-  // 查分页数据
+  // 查分页数据（TiDB 不支持 LIMIT ? 参数化，用字符串拼接）
   const [rows] = await pool.execute(
-    `SELECT * FROM products ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-    [...params, pageSize, offset]
+    `SELECT * FROM products ${where} ORDER BY created_at DESC LIMIT ${pageSize} OFFSET ${offset}`,
+    params
   );
 
   // 为每个产品计算起步价

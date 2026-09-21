@@ -49,8 +49,8 @@ router.get('/orders', async (req, res) => {
 
   const [rows] = await pool.execute(
     `SELECT o.*, u.username FROM orders o JOIN users u ON o.user_id = u.id ${where}
-     ORDER BY o.created_at DESC LIMIT ? OFFSET ?`,
-    [...params, pageSize, offset]
+     ORDER BY o.created_at DESC LIMIT ${pageSize} OFFSET ${offset}`,
+    params
   );
   res.json({
     orders: rows,

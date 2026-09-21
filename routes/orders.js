@@ -139,8 +139,8 @@ router.get('/my', requireLogin, async (req, res) => {
      WHERE o.user_id = ?
      GROUP BY o.id
      ORDER BY o.created_at DESC
-     LIMIT ? OFFSET ?`,
-    [req.user.id, pageSize, offset]
+     LIMIT ${pageSize} OFFSET ${offset}`,
+    [req.user.id]
   );
   res.json({
     orders: rows,

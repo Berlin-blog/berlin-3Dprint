@@ -16,8 +16,8 @@ router.get('/', requireLogin, async (req, res) => {
   );
 
   const [rows] = await pool.execute(
-    'SELECT * FROM messages WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
-    [req.user.id, pageSize, offset]
+    `SELECT * FROM messages WHERE user_id = ? ORDER BY created_at DESC LIMIT ${pageSize} OFFSET ${offset}`,
+    [req.user.id]
   );
 
   const [[{ unread }]] = await pool.execute(
