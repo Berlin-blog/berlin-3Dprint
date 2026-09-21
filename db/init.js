@@ -8,14 +8,18 @@ const path = require('path');
 const mysql = require('mysql2/promise');
 const bcrypt = require('bcryptjs');
 
-// 加载 .env
+// 加载 .env（不覆盖已有的环境变量，优先用命令行传入的）
 const envPath = path.join(__dirname, '..', '.env');
 if (fs.existsSync(envPath)) {
   for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
     const t = line.trim();
     if (!t || t.startsWith('#')) continue;
     const idx = t.indexOf('=');
-    if (idx > 0) process.env[t.slice(0, idx).trim()] = t.slice(idx + 1).trim();
+    if (idx > 0) {
+      const key = t.slice(0, idx).trim();
+      const val = t.slice(idx + 1).trim();
+      if (!process.env[key]) process.env[key] = val;
+    }
   }
 }
 

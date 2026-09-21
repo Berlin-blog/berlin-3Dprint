@@ -16,7 +16,7 @@ if (fs.existsSync(envPath)) {
     const t = line.trim();
     if (!t || t.startsWith('#')) continue;
     const idx = t.indexOf('=');
-    if (idx > 0) process.env[t.slice(0, idx).trim()] = t.slice(idx + 1).trim();
+    if (idx > 0) { const key = t.slice(0, idx).trim(); const val = t.slice(idx + 1).trim(); if (!process.env[key]) process.env[key] = val; }
   }
 }
 
@@ -28,7 +28,7 @@ async function migrate() {
     password: process.env.DB_PASSWORD || 'root123456',
     database: process.env.DB_NAME || '3dprint',
     multipleStatements: true,
-    ssl: DB_SSL ? { rejectUnauthorized: true } : undefined,
+    ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: true } : undefined,
   });
 
   console.log('✅ 连接数据库成功');
